@@ -1,0 +1,13 @@
+# Data
+data/raw/
+data/embeddings/
+data/vector_store/
+
+# Large files
+*.csv
+*.parquet
+
+# Env
+.env
+__pycache__/
+.ipynb_checkpoints/
