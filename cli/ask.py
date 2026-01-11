@@ -1,11 +1,21 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[13]:
+
 
 import argparse
-import sys, os
+import sys
+import os
 
-# Add project root to Python path
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+import warnings
+warnings.filterwarnings("ignore")
+
+
+PROJECT_ROOT = os.path.abspath("")
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
+
 from rag.retriever import FinancialRetriever, load_vectorstore
 from rag.engine import FinancialQAEngine
 
@@ -43,7 +53,8 @@ def main():
     else:
         raise ValueError("You must specify either --year or both --start_year and --end_year")
 
-    print("\n" + answer + "\n")
+    for a in answer:
+        print(a) 
 
 if __name__ == "__main__":
     main()
