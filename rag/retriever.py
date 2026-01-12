@@ -1,7 +1,7 @@
 import pandas as pd
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.docstore.document import Document
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_community.docstore.document import Document
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -16,14 +16,17 @@ def financial_row_to_doc(row):
         f"{row['companyFact']} of {row['val']} {row['units']}, "
         f"as disclosed in its {row['form']} filing."
     )
+
     metadata = {
         "cik": row["cik"],
         "company": row["entityName"],
         "line_item": row["companyFact"],
-        "fiscal_year": row["fy"],
+        "fiscal_year": int(row["fy"]),
+        "value": float(row["val"]),
+        "units": row["units"],
         "form": row["form"],
         "filing_date": row["filed"],
-        "value": float(row["val"])
+        "source": "SEC Filing"
     }
     return Document(page_content=content, metadata=metadata)
 

@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[13]:
-
-
 import argparse
 import sys
 import os
+import json
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -19,6 +17,13 @@ if PROJECT_ROOT not in sys.path:
 from rag.retriever import FinancialRetriever, load_vectorstore
 from rag.engine import FinancialQAEngine
 
+def print_fact(fact):
+    value = fact.get("value", fact.get("yoy_growth_pct", "N/A"))
+    units = fact.get("units", "")
+    citation = fact.get("citation", {})
+    print(f"{value} {units} "
+          f"({citation.get('source','N/A')}, {citation.get('form','N/A')}, filed {citation.get('filing_date','N/A')})")
+
 def main():
     parser = argparse.ArgumentParser(description="Financial RAG CLI")
     parser.add_argument("--company", required=True, help="Company name")
@@ -26,6 +31,8 @@ def main():
     parser.add_argument("--year", type=int, help="Single fiscal year")
     parser.add_argument("--start_year", type=int, help="Start fiscal year for trend")
     parser.add_argument("--end_year", type=int, help="End fiscal year for trend")
+    parser.add_argument("--json", action="store_true", help="Output in JSON format")
+
 
     args = parser.parse_args()
 
@@ -44,17 +51,36 @@ def main():
             end_year=args.end_year
         )
     elif args.year:
-        # Single-year query
-        answer = engine.answer_single_year(
-            query=args.question,
-            company=args.company,
-            fiscal_year=args.year
-        )
+        query = args.question.lower()
+        if "growth" in query or "yoy" in query:
+            answer = engine.answer_yoy_growth(
+                query=args.question,
+                company=args.company,
+                year=args.year
+            )
+        else:
+            answer = engine.answer_single_year(
+                query=args.question,
+                company=args.company,
+                fiscal_year=args.year
+            )
     else:
         raise ValueError("You must specify either --year or both --start_year and --end_year")
 
-    for a in answer:
-        print(a) 
+    print("\nANSWER:\n")
+
+    if isinstance(answer, list):
+        for fact in answer:
+            if args.json:
+                print(json.dumps(fact, indent=2))
+            else:
+                print_fact(fact)
+    else:
+        if args.json:
+            print(json.dumps(answer, indent=2))
+        else:
+            print(answer)
+
 
 if __name__ == "__main__":
     main()
