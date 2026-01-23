@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
 import pandas as pd
 
 import warnings
@@ -13,16 +7,8 @@ financial_facts = pd.read_csv(
     "../data/processed/financial_facts_clean.csv"
 )
 
-
-# In[2]:
-
-
 financial_facts.shape
 financial_facts.head()
-
-
-# In[3]:
-
 
 def financial_row_to_chunk(row):
     value = float(row["val"])
@@ -51,21 +37,14 @@ def financial_row_to_chunk(row):
 
     return {"text": text, "metadata": metadata}
 
-
-# In[4]:
-
-
 sample_row = financial_facts.iloc[0]
 chunk = financial_row_to_chunk(sample_row)
 
 print(chunk["text"])
 print(chunk["metadata"])
 
-
-
 if __name__ == "__main__":
     print("Running chunking sanity check...")
-    # e = FinancialQAEngine(...)
     print("Chunking module loads successfully")
 
 

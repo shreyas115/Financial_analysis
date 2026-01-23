@@ -14,7 +14,7 @@ PROJECT_ROOT = os.path.abspath("")
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from rag.retriever import FinancialRetriever, load_vectorstore
+from rag.retriever import FinancialRetriever, load_vectorstore, companies_list
 from rag.engine import FinancialQAEngine
 
 def print_fact(fact):
@@ -38,7 +38,8 @@ def main():
 
     # Load vector store
     vectorstore = load_vectorstore()
-    retriever = FinancialRetriever(vectorstore)
+    companies = companies_list()
+    retriever = FinancialRetriever(vectorstore, companies)
     engine = FinancialQAEngine(retriever)
 
     # Determine query type

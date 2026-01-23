@@ -1,4 +1,5 @@
 import pandas as pd
+import re
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_community.docstore.document import Document
@@ -9,6 +10,27 @@ warnings.filterwarnings("ignore")
 
 DATA_PATH = "data/processed/financial_facts_clean.csv"
 
+def normalize(text: str) -> str:
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9 ]", "", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+def resolve_company(user_company: str, companies: list[str]) -> str | None:
+    user_norm = normalize(user_company)
+
+    matches = [
+        c for c in companies
+        if user_norm in normalize(c)
+    ]
+
+    if len(matches) == 1:
+        return matches[0]
+
+    if len(matches) > 1:
+        # Pick the shortest match (usually most canonical)
+        return sorted(matches, key=len)[0]
+
+    return None
 
 def financial_row_to_doc(row):
     content = (
@@ -46,10 +68,15 @@ def load_vectorstore():
 
     return FAISS.from_documents(documents, embeddings)
 
+def companies_list():
+    df = pd.read_csv(DATA_PATH)
+    all_companies = sorted(set(df["entityName"].str.upper()))
+    return all_companies
 
 class FinancialRetriever:
-    def __init__(self, vectorstore):
+    def __init__(self, vectorstore, all_companies: list[str]):
         self.vectorstore = vectorstore
+        self.all_companies = all_companies
 
     def retrieve(
         self,
@@ -58,13 +85,33 @@ class FinancialRetriever:
         fiscal_year: int | None = None,
         k: int = 5,
     ):
-        docs = self.vectorstore.similarity_search(query, k=k)
+        # Resolve company FIRST
+        resolved_company = resolve_company(company, self.all_companies)
 
-        if company:
-            docs = [d for d in docs if company in d.metadata["company"]]
+        if not resolved_company:
+            return []
+        print(resolved_company)
+        # Filter documents by company
+        company_docs = [
+            d for d in self.vectorstore.docstore._dict.values()
+            if d.metadata.get("company") == resolved_company
+        ]
+        print(company_docs)
+        # Create temporary FAISS index for that company
+        sub_vectorstore = FAISS.from_documents(
+            company_docs,
+            self.vectorstore.embedding_function
+        )
 
+        # 4Semantic search ONLY within company
+        docs = sub_vectorstore.similarity_search(query, k=k)
+
+        # 5Optional year filter
         if fiscal_year:
-            docs = [d for d in docs if d.metadata["fiscal_year"] == fiscal_year]
+            docs = [
+                d for d in docs
+                if d.metadata.get("fiscal_year") == fiscal_year
+            ]
 
         return docs
 

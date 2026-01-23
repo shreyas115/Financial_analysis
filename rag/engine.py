@@ -100,11 +100,12 @@ class FinancialQAEngine:
             fiscal_year=fiscal_year,
             k=10
         )
+
         docs = [
             d for d in docs
             if d.metadata["line_item"] == metric
         ]
-        
+
         if not docs:
             return f"No {metric} data found for {company} in {fiscal_year}."
 
@@ -157,5 +158,4 @@ class FinancialQAEngine:
 
 if __name__ == "__main__":
     print("Running engine sanity check...")
-    # e = FinancialQAEngine(...)
     print("Engine module loads successfully")
