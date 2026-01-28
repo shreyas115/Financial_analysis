@@ -16,6 +16,7 @@ if PROJECT_ROOT not in sys.path:
 
 from rag.retriever import FinancialRetriever, load_vectorstore, companies_list
 from rag.engine import FinancialQAEngine
+from data.company_registry import CANONICAL_COMPANIES
 
 def print_fact(fact):
     value = fact.get("value", fact.get("yoy_growth_pct", "N/A"))
@@ -23,6 +24,13 @@ def print_fact(fact):
     citation = fact.get("citation", {})
     print(f"{value} {units} "
           f"({citation.get('source','N/A')}, {citation.get('form','N/A')}, filed {citation.get('filing_date','N/A')})")
+
+def normalize_company_input(user_input: str):
+    user_input = user_input.upper()
+    for entry in CANONICAL_COMPANIES.values():
+        if entry["canonical"] in user_input:
+            return entry["canonical"]
+    return user_input
 
 def main():
     parser = argparse.ArgumentParser(description="Financial RAG CLI")
@@ -35,6 +43,7 @@ def main():
 
 
     args = parser.parse_args()
+    company = normalize_company_input(args.company)
 
     # Load vector store
     vectorstore = load_vectorstore()
@@ -47,7 +56,7 @@ def main():
         # Multi-year trend query
         answer = engine.answer_trend_question(
             query=args.question,
-            company=args.company,
+            company=company,
             start_year=args.start_year,
             end_year=args.end_year
         )
@@ -56,18 +65,18 @@ def main():
         if "growth" in query or "yoy" in query:
             answer = engine.answer_yoy_growth(
                 query=args.question,
-                company=args.company,
+                company=company,
                 year=args.year
             )
         else:
             answer = engine.answer_single_year(
                 query=args.question,
-                company=args.company,
+                company=company,
                 fiscal_year=args.year
             )
     else:
         raise ValueError("You must specify either --year or both --start_year and --end_year")
-
+    
     print("\nANSWER:\n")
 
     if isinstance(answer, list):

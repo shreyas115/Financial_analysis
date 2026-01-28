@@ -27,7 +27,6 @@ def resolve_company(user_company: str, companies: list[str]) -> str | None:
         return matches[0]
 
     if len(matches) > 1:
-        # Pick the shortest match (usually most canonical)
         return sorted(matches, key=len)[0]
 
     return None
@@ -90,30 +89,32 @@ class FinancialRetriever:
 
         if not resolved_company:
             return []
-        print(resolved_company)
         # Filter documents by company
         company_docs = [
             d for d in self.vectorstore.docstore._dict.values()
-            if d.metadata.get("company") == resolved_company
+            if str.lower(d.metadata.get("company")) == str.lower(resolved_company)
         ]
-        print(company_docs)
-        # Create temporary FAISS index for that company
-        sub_vectorstore = FAISS.from_documents(
-            company_docs,
-            self.vectorstore.embedding_function
-        )
-
-        # 4Semantic search ONLY within company
-        docs = sub_vectorstore.similarity_search(query, k=k)
-
+        if not company_docs:
+            return []
+        
+        query_lower = query.lower()
+        matched_docs = [
+            d for d in company_docs
+            if query_lower in str(d.metadata.get("line_item")).lower()
+        ]
         # 5Optional year filter
         if fiscal_year:
-            docs = [
-                d for d in docs
+            matched_docs = [
+                d for d in matched_docs
                 if d.metadata.get("fiscal_year") == fiscal_year
             ]
-
-        return docs
+        
+        if not matched_docs:
+        # create temporary FAISS index for company docs
+            sub_vectorstore = FAISS.from_documents(company_docs, self.vectorstore.embedding_function)
+            matched_docs = sub_vectorstore.similarity_search(query, k=k)
+        
+        return matched_docs
 
 
 if __name__ == "__main__":
